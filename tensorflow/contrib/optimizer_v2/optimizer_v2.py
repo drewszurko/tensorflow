@@ -916,7 +916,8 @@ class OptimizerV2(optimizer_v1.Optimizer):
     var_list = [v for _, v in grads_and_vars]
     grads_and_vars = zip(reduced_grads, var_list)
 
-    unwrapped_var_list = [x for v in var_list for x in distribution.unwrap(v)]
+    unwrapped_var_list = [
+        x for v in var_list for x in distribution.experimental_local_results(v)]
     eager_execution = context.executing_eagerly()
     if eager_execution:
       # Give a clear error in this case instead of "name not supported
@@ -965,7 +966,7 @@ class OptimizerV2(optimizer_v1.Optimizer):
         # `update_op`.
         # TODO(josh11b): Make different state objects for each device to
         # avoid needing to set the device_policy.
-        device_policy = context.context().device_policy(
+        device_policy = context.device_policy(
             context.DEVICE_PLACEMENT_SILENT)
         with ops.name_scope("update_" + scope_name), device_policy:
           return processor.update_op(self, g, state)
@@ -981,7 +982,7 @@ class OptimizerV2(optimizer_v1.Optimizer):
       def finish():
         # TODO(josh11b): Make different state objects for each device to
         # avoid needing to set the device_policy.
-        with context.context().device_policy(context.DEVICE_PLACEMENT_SILENT):
+        with context.device_policy(context.DEVICE_PLACEMENT_SILENT):
           return self._finish(state)
 
       update_ops = control_flow_ops.group(update_ops)
